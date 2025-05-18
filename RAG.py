@@ -17,7 +17,8 @@ Ask questions about America's Choice health plans. If your question is not answe
 """)
 
 # Read Hugging Face token from Streamlit secrets
-os.environ["HUGGINGFACEHUB_API_TOKEN"] = st.secrets["HUGGINGFACEHUB_API_TOKEN"]
+import os
+os.environ["HUGGINGFACEHUB_API_TOKEN"] = "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"
 
 @st.cache_resource
 def load_vectorstore():
