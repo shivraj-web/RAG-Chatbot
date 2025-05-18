@@ -2,15 +2,10 @@ import os
 import streamlit as st
 from langchain.document_loaders import PyMuPDFLoader, Docx2txtLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores.faiss import FAISS
+from langchain.vectorstores import FAISS
 from langchain.chains import RetrievalQA
 from langchain.embeddings import HuggingFaceEmbeddings
-from langchain_hub import HuggingFaceHub
-import numpy as np
-
-# Hardcode your HuggingFace Hub token here for local run
-HUGGINGFACEHUB_API_TOKEN = "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"
-os.environ["HUGGINGFACEHUB_API_TOKEN"] = HUGGINGFACEHUB_API_TOKEN
+from huggingface_hub import InferenceClient
 
 st.set_page_config(page_title="America's Choice RAG Bot", page_icon="🤖")
 
@@ -19,9 +14,22 @@ st.markdown("""
 Ask questions about America's Choice health plans. If your question is not answered based on the documentation, the bot will say "I don't know."
 """)
 
+# Replace this token with your actual HuggingFace API token or load from .streamlit/secrets.toml
+HUGGINGFACEHUB_API_TOKEN = "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"
+os.environ["HUGGINGFACEHUB_API_TOKEN"] = HUGGINGFACEHUB_API_TOKEN
+
+client = InferenceClient(token=HUGGINGFACEHUB_API_TOKEN)
+
+def query_hf_llm(prompt):
+    try:
+        response = client.text_generation(model="google/flan-t5-base", inputs=prompt, max_new_tokens=150)
+        return response[0]['generated_text']
+    except Exception as e:
+        st.error(f"Error querying HuggingFace LLM: {e}")
+        return ""
+
 @st.cache_resource
 def load_vectorstore():
-    # Load documents from PDFs and DOCX
     loaders = [
         PyMuPDFLoader("America's_Choice_2500_Gold_SOB (1) (1).pdf"),
         PyMuPDFLoader("America's_Choice_5000_Bronze_SOB (2).pdf"),
@@ -29,54 +37,34 @@ def load_vectorstore():
         PyMuPDFLoader("America's_Choice_7350_Copper_SOB (1) (1).pdf"),
         Docx2txtLoader("America's_Choice_Medical_Questions_-_Modified_(3) (1).docx")
     ]
-
     documents = []
     for loader in loaders:
-        try:
-            documents.extend(loader.load())
-        except Exception as e:
-            st.warning(f"Failed to load a document: {e}")
+        documents.extend(loader.load())
 
     splitter = RecursiveCharacterTextSplitter(chunk_size=600, chunk_overlap=100)
     chunks = splitter.split_documents(documents)
 
-    # Use HuggingFace sentence-transformer embeddings (free and cloud-hosted)
-    embeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2",
-        huggingfacehub_api_token=HUGGINGFACEHUB_API_TOKEN
-    )
-
-    # Get text content from chunks
-    texts = [doc.page_content for doc in chunks]
-
-    # Embed texts as vectors
-    embedding_vectors = embeddings.embed_documents(texts)
-
-    # Convert embeddings to float32 numpy array
-    embedding_vectors = np.array(embedding_vectors).astype("float32")
-
-    # Create FAISS vectorstore from embeddings and documents
-    db = FAISS.from_embeddings(embedding_vectors, chunks)
+    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    db = FAISS.from_documents(chunks, embeddings)
     return db
 
 @st.cache_resource
 def load_qa_chain(db):
     retriever = db.as_retriever(search_kwargs={"k": 4})
 
-    # Use HuggingFaceHub LLM (free hosted model) instead of local Ollama
-    llm = HuggingFaceHub(
-        repo_id="google/flan-t5-base",  # Example free model; change as needed
-        model_kwargs={"temperature": 0, "max_length": 256},
-        huggingfacehub_api_token=HUGGINGFACEHUB_API_TOKEN
-    )
+    # We create a wrapper for the HuggingFace Inference API call
+    class HFLLMWrapper:
+        def __call__(self, prompt):
+            return query_hf_llm(prompt)
 
-    chain = RetrievalQA.from_chain_type(
+    llm = HFLLMWrapper()
+
+    return RetrievalQA.from_chain_type(
         llm=llm,
         chain_type="stuff",
         retriever=retriever,
         return_source_documents=False
     )
-    return chain
 
 query = st.text_input("Enter your question:")
 if query:
