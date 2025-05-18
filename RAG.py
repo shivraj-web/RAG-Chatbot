@@ -1,24 +1,23 @@
-# File: app.py
 import os
 import streamlit as st
 from langchain.document_loaders import PyMuPDFLoader, Docx2txtLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores import FAISS
+from langchain.vectorstores.faiss import FAISS
 from langchain.chains import RetrievalQA
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.llms import HuggingFaceHub
+from langchain.embeddings import HuggingFaceEmbeddings
+from langchain_hub import HuggingFaceHub
+import numpy as np
 
-# Set Streamlit page config
+# Hardcode your HuggingFace Hub token here for local run
+HUGGINGFACEHUB_API_TOKEN = "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"
+os.environ["HUGGINGFACEHUB_API_TOKEN"] = HUGGINGFACEHUB_API_TOKEN
+
 st.set_page_config(page_title="America's Choice RAG Bot", page_icon="🤖")
 
 st.title("📋 America's Choice RAG Chatbot")
 st.markdown("""
 Ask questions about America's Choice health plans. If your question is not answered based on the documentation, the bot will say "I don't know."
 """)
-
-# Read Hugging Face token from Streamlit secrets
-import os
-os.environ["HUGGINGFACEHUB_API_TOKEN"] = "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"
 
 @st.cache_resource
 def load_vectorstore():
@@ -38,25 +37,37 @@ def load_vectorstore():
         except Exception as e:
             st.warning(f"Failed to load a document: {e}")
 
-    # Split documents into manageable chunks
     splitter = RecursiveCharacterTextSplitter(chunk_size=600, chunk_overlap=100)
     chunks = splitter.split_documents(documents)
 
-    # Use free Hugging Face sentence transformer model for embeddings
-    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    # Use HuggingFace sentence-transformer embeddings (free and cloud-hosted)
+    embeddings = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-MiniLM-L6-v2",
+        huggingfacehub_api_token=HUGGINGFACEHUB_API_TOKEN
+    )
 
-    # Create a FAISS vector store from the document chunks
-    db = FAISS.from_documents(chunks, embeddings)
+    # Get text content from chunks
+    texts = [doc.page_content for doc in chunks]
+
+    # Embed texts as vectors
+    embedding_vectors = embeddings.embed_documents(texts)
+
+    # Convert embeddings to float32 numpy array
+    embedding_vectors = np.array(embedding_vectors).astype("float32")
+
+    # Create FAISS vectorstore from embeddings and documents
+    db = FAISS.from_embeddings(embedding_vectors, chunks)
     return db
 
 @st.cache_resource
-def load_qa_chain(_db):
-    retriever = _db.as_retriever(search_kwargs={"k": 4})
+def load_qa_chain(db):
+    retriever = db.as_retriever(search_kwargs={"k": 4})
 
-    # Replace local LLM with Hugging Face cloud model (free tier)
+    # Use HuggingFaceHub LLM (free hosted model) instead of local Ollama
     llm = HuggingFaceHub(
-        repo_id="mistralai/Mistral-7B-Instruct-v0.1",  # Free model
-        model_kwargs={"temperature": 0.5, "max_new_tokens": 500}
+        repo_id="google/flan-t5-base",  # Example free model; change as needed
+        model_kwargs={"temperature": 0, "max_length": 256},
+        huggingfacehub_api_token=HUGGINGFACEHUB_API_TOKEN
     )
 
     chain = RetrievalQA.from_chain_type(
@@ -67,7 +78,6 @@ def load_qa_chain(_db):
     )
     return chain
 
-# Main user input interface
 query = st.text_input("Enter your question:")
 if query:
     with st.spinner("Searching documents..."):
