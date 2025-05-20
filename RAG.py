@@ -2,7 +2,7 @@ import os
 import streamlit as st
 from langchain.document_loaders import PyMuPDFLoader, Docx2txtLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores import FAISS
+from langchain.vectorstores import Chroma
 from langchain.chains import RetrievalQA
 from langchain.embeddings import HuggingFaceEmbeddings
 from transformers import AutoTokenizer, pipeline
@@ -42,7 +42,15 @@ def load_vectorstore():
             model_kwargs={'device': 'cpu'}
         )
 
-        db = FAISS.from_documents(chunks, embeddings)
+        persist_directory = "chroma_db"
+
+        db = Chroma.from_documents(
+            chunks,
+            embedding=embeddings,
+            persist_directory=persist_directory
+        )
+        db.persist()
+
         return db
     except Exception as e:
         st.error(f"Error loading documents: {str(e)}")
