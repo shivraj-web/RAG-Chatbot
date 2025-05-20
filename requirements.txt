@@ -1,7 +1,6 @@
-# Core Streamlit
 streamlit>=1.33.0
 
-# LangChain ecosystem
+# LangChain and ecosystem
 langchain>=0.1.13
 langchain-community>=0.0.33
 sentence-transformers>=2.2.2
@@ -9,12 +8,12 @@ transformers>=4.40.0
 torch>=2.0.0
 accelerate>=0.25.0
 
+# Chroma vectorstore (instead of FAISS)
+chromadb>=0.4.22
+
 # Document loaders
 PyMuPDF==1.23.7
 docx2txt>=0.8
 
-# Vector store (compatible FAISS version)
-faiss-cpu==1.7.4
-
-# Optional: avoid tokenizer bugs
+# Avoid tokenizer bugs
 protobuf<4.0.0
