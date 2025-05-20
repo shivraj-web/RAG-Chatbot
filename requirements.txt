@@ -1,4 +1,4 @@
-# Core app
+# Core Streamlit
 streamlit>=1.33.0
 
 # LangChain ecosystem
@@ -13,9 +13,8 @@ accelerate>=0.25.0
 PyMuPDF==1.23.7
 docx2txt>=0.8
 
-# Vector database
-faiss-cpu==1.7.4.post2 ; platform_machine != 'aarch64'
-# For compatibility across platforms, this version is prebuilt
+# Vector store (compatible FAISS version)
+faiss-cpu==1.7.4
 
-# Optional: prevent tokenization-related errors
+# Optional: avoid tokenizer bugs
 protobuf<4.0.0
