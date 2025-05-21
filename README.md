@@ -15,4 +15,14 @@ A private, intelligent chatbot that answers user questions based on America's Ch
 ---
 
 ## 📁 Folder Structure
+rag-chatbot/
+├── RAG.py
+├── requirements.txt
+├── .streamlit/
+│   └── config.toml
+├── data/         
+│   ├── file1.pdf
+│   └── file2.docx
+└── README.md 
+
 
