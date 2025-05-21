@@ -2,13 +2,13 @@ import os
 import streamlit as st
 from langchain.document_loaders import PyMuPDFLoader, Docx2txtLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores import Chroma
+from langchain.vectorstores import FAISS
 from langchain.chains import RetrievalQA
 from langchain.embeddings import HuggingFaceEmbeddings
 from transformers import AutoTokenizer, pipeline
 from langchain_community.llms import HuggingFacePipeline
 
-# UI Setup
+# UI Setup good
 st.set_page_config(page_title="America's Choice RAG Bot", page_icon="🤖")
 st.title("📋 America's Choice RAG Chatbot")
 st.markdown("""
@@ -42,15 +42,7 @@ def load_vectorstore():
             model_kwargs={'device': 'cpu'}
         )
 
-        persist_directory = "chroma_db"
-
-        db = Chroma.from_documents(
-            chunks,
-            embedding=embeddings,
-            persist_directory=persist_directory
-        )
-        db.persist()
-
+        db = FAISS.from_documents(chunks, embeddings)
         return db
     except Exception as e:
         st.error(f"Error loading documents: {str(e)}")
@@ -105,7 +97,8 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # Chat input and answer
-if prompt := st.chat_input("Ask about America's Choice health plans:"):
+prompt = st.text_input("Ask about America's Choice health plans:")
+if prompt :
     st.session_state.messages.append({"role": "user", "content": prompt})
 
     with st.chat_message("user"):
