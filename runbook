@@ -1,0 +1,47 @@
+🧾 RAG Chatbot – Local Runbook
+This runbook provides step-by-step instructions to set up and run the Retrieval-Augmented Generation (RAG) chatbot on your local machine.
+
+✅ Prerequisites
+Ensure the following are installed:
+
+Python 3.8+
+
+pip (Python package manager)
+
+Git
+
+Virtualenv (optional but recommended)
+
+📁 Clone the Repository
+git clone https://github.com/your-username/your-rag-chatbot-repo.git
+cd your-rag-chatbot-repo
+
+🧪 Set Up a Virtual Environment (optional but recommended)
+python -m venv venv
+source venv/bin/activate   # On Windows: venv\Scripts\activate
+
+Install Dependencies
+pip install -r requirements.txt
+Ensure requirements.txt includes all necessary packages like langchain, chromadb, streamlit, transformers, etc.
+Place the support documentation and PDF files in correct folder inside the project root.
+
+If you’re using a vector store like ChromaDB, ensure embeddings are created/stored or run the embedding script once.
+
+Run the Embedding/Indexing Script
+
+python embed_documents.py
+
+This script will:
+
+Parse PDFs and web pages
+
+Chunk the text
+
+Generate embeddings using a selected model
+
+Store them in a local vector store (e.g., ChromaDB)
+
+Run the Chatbot
+If you're using Streamlit, start the app with:
+
+streamlit run RAG.py
